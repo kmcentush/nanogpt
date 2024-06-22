@@ -1,0 +1,30 @@
+repos:
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: 'v0.4.10'
+    hooks:
+      - id: ruff-format
+        args:
+          - --check
+        files: .
+        types_or: [python, pyi, jupyter]
+        language_version: python3.10
+      - id: ruff
+        files: .
+        types_or: [python, pyi, jupyter]
+        language_version: python3.10
+  - repo: 'https://github.com/pre-commit/mirrors-mypy'
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        args:
+          - '--install-types'
+          - '--ignore-missing-imports'
+          - '--non-interactive'
+        files: .
+        language_version: python3.10
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.7.1
+    hooks:
+      - id: nbstripout
+        files: .
+        language_version: python3.10

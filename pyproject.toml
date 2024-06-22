@@ -1,0 +1,124 @@
+[project]
+name = "nanogpt"
+description = ""
+readme = "README.md"
+authors = [
+    {name = "Kyle McEntush"},
+]
+dynamic = ["version"]
+dependencies = [
+    "numpy<2.0.0",  # Remove after `torch` supports it
+    "tiktoken",
+    "torch",
+    "triton",
+    "transformers",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy",
+    "nbstripout",
+    "pre-commit",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "nanogpt.__version__"}
+
+[tool.uv.pip]
+index-url = "https://download.pytorch.org/whl/cu121"
+extra-index-url = ["https://pypi.org/simple"]
+
+[tool.ruff]
+include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    # pyflakes
+    "F",
+    # pycodestyle
+    "E",
+    "W",
+    # flake8-2020
+    "YTT",
+    # flake8-bugbear
+    "B",
+    # flake8-commas
+    "COM",
+    # flake8-datetimez
+    "DTZ",
+    # flake8-quotes
+    "Q",
+    # pylint
+    "PLE", "PLR", "PLW",
+    # misc lints
+    "PIE",
+    # flake8-pyi
+    "PYI",
+    # tidy imports
+    "TID",
+    # implicit string concatenation
+    "ISC",
+    # type-checking imports
+    "TCH",
+    # isort
+    "I",
+    # comprehensions
+    "C4",
+    # pygrep-hooks
+    "PGH",
+    # Ruff-specific rules
+    "RUF",
+    # Upgrade syntax
+    "UP",
+]
+ignore = [
+    # module level import not at top of file
+    "E402",
+    # too many branches
+    "PLR0912",
+    # too many arguments to function call
+    "PLR0913",
+    # too many statements in function
+    "PLR0915",
+    # magic value used in comparison,
+    "PLR2004",
+    # do not use mutable models structures for argument defaults
+    "B006",
+    # recommended by Ruff to disable to avoid issues with formatter
+    "COM812", "ISC001",
+]
+per-file-ignores = {"__init__.py" = ["F401"]}
+
+[tool.ruff.lint.flake8-type-checking]
+quote-annotations = true
+
+[tool.mypy]
+exclude = ['venv', '.venv']
+
+[tool.coverage.report]
+# Regexes for lines to exclude from consideration
+exclude_also = [
+    # Don't complain about missing debug-only code:
+    "def __repr__",
+    "if self\\.debug",
+
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+
+    # Don't complain if non-runnable code isn't run:
+    "if 0:",
+    "if __name__ == .__main__.:",
+
+    # Don't complain about abstract methods, they aren't run:
+    "@(abc\\.)?abstractmethod",
+
+    # Skip type checks
+    "if TYPE_CHECKING:"
+    ]
+ignore_errors = true
