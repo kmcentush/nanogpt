@@ -15,6 +15,16 @@ class Dataset:
     def batches_per_epoch(self) -> int:
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def batch_size(self) -> int:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def sequence_length(self) -> int:
+        raise NotImplementedError
+
     def __iter__(self):  # pragma: no cover
         return self
 

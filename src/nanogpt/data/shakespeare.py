@@ -43,6 +43,14 @@ class Shakespeare(Dataset):
     def batches_per_epoch(self) -> int:
         return len(self.tokens) // (self.B * self.T)
 
+    @property
+    def batch_size(self) -> int:
+        return self.B
+
+    @property
+    def sequence_length(self) -> int:
+        return self.T
+
     def reset(self):
         self.position = 0
 

@@ -13,6 +13,13 @@ if TYPE_CHECKING:
 
 
 @dataclass
+class TrainConfig:
+    num_epochs: int
+    num_batches: int
+    batch_size: int
+
+
+@dataclass
 class LRConfig:
     max_lr: float = 6e-4  # maximum learning rate
     min_lr: float = 6e-5  # minimum learning rate
@@ -37,8 +44,7 @@ def get_lr(step: int, lr_config: LRConfig) -> float:
 def train(
     model: nn.Module,
     train_data: "Dataset",
-    num_epochs: int,
-    num_batches: int,
+    train_config: TrainConfig,
     lr_config: LRConfig | None = None,
     compile: bool = True,
     seed: int | None = None,
@@ -63,30 +69,45 @@ def train(
     # Get optimizer
     optimizer = model.configure_optimizer(weight_decay=0.1, learning_rate=6e-4, device=device)
 
+    # Handle micro batches
+    num_micro_batches = train_config.batch_size // (train_data.batch_size * train_data.sequence_length)
+
     # Optimization loop
     print("Optimizing")
-    for epoch in range(num_epochs):
+    for epoch in range(train_config.num_epochs):
         train_data.reset()
-        for batch in range(num_batches):
+        for batch in range(train_config.num_batches):
             # TODO: remove time
             # Start time
             t0 = time.time()
 
-            # Get data
-            inputs, targets = next(train_data)
-            inputs = inputs.to(device)
-            targets = targets.to(device)
+            # Zero gradients
+            optimizer.zero_grad()
 
-            # Zero gradients and calculate loss
-            optimizer.zero_grad()  # start at 0 gradients
-            with torch.autocast(device_type=device, dtype=torch.bfloat16):  # reduce precision to speed up training
-                logits, loss = model(inputs, targets)
-            loss.backward()  # accumulates gradients (does a +=)
+            # Handle micro batches
+            batch_loss = torch.zeros(1, dtype=torch.bfloat16).to(device)
+            for _ in range(num_micro_batches):
+                # Get data
+                inputs, targets = next(train_data)
+                inputs = inputs.to(device)
+                targets = targets.to(device)
+
+                # Calculate loss
+                with torch.autocast(device_type=device, dtype=torch.bfloat16):  # reduce precision to speed up training
+                    logits, loss = model(inputs, targets)
+                # Scale the loss to account for gradient accumulation, because the gradients just add on each successive
+                # backward(). Addition of gradients corresponds to a SUM in the objective, but instead of a SUM we want
+                # MEAN. Scale the loss here so it comes out right.
+                loss = loss / num_micro_batches
+                batch_loss += loss.detach()  # detach from graph to only track value
+                loss.backward()  # accumulates gradients (does a +=)
+
+            # Clip gradients
             norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # clip gradient
 
             # Get and apply learning rate for this iteration
             if lr_config is not None:
-                step = epoch * num_batches + batch
+                step = epoch * train_config.num_batches + batch
                 lr = get_lr(step, lr_config)
                 for param_group in optimizer.param_groups:
                     param_group["lr"] = lr
@@ -101,6 +122,6 @@ def train(
             dt = (t1 - t0) * 1000  # s -> ms
 
             # Print
-            print(f"epoch {epoch}, batch {batch}, loss: {loss.item():.3f}, norm: {norm:.3f}, dt: {dt:.2f}ms")
+            print(f"epoch {epoch}, batch {batch}, loss: {batch_loss.item():.3f}, norm: {norm:.3f}, dt: {dt:.2f}ms")
 
     return model
